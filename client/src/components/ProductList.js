@@ -42,20 +42,39 @@ export default function ProductList(){
         </select>
         <button onClick={search} className="bg-green-600 text-white px-4 py-2 rounded">Search</button>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {products.map(p=> (
-          <div key={p._id} className="bg-white p-4 rounded-xl shadow hover:shadow-lg transition">
-            {p.imageUrl ? <img src={(process.env.REACT_APP_API || '') + p.imageUrl} className="h-40 w-full object-cover rounded" alt={p.name} /> : <div className="h-40 w-full bg-gray-100 rounded mb-2 flex items-center justify-center text-gray-400">No Image</div>}
-            <h3 className="font-bold mt-3">{p.name}</h3>
-            <p className="text-sm text-gray-600">{p.description}</p>
-            <div className="mt-2 flex justify-between items-center">
-              <div className="text-lg font-semibold">₹{p.price}</div>
-              <button disabled={p.qty<=0} onClick={()=>placeOrder(p._id)} className="bg-gradient-to-r from-green-600 to-green-500 text-white px-3 py-1 rounded">Order</button>
-            </div>
-            <div className="text-sm text-gray-500 mt-1">Stock: {p.qty} | Farmer: {p.farmer?.name}</div>
-          </div>
-        ))}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+  {products.map(p => (
+    <div key={p._id} className="bg-white p-4 rounded-2xl shadow-md hover:shadow-xl transition transform hover:-translate-y-1">
+      {p.imageUrl ? (
+        <img
+          src={p.imageUrl}
+          className="h-48 w-full object-cover rounded-xl mb-3"
+          alt={p.name}
+        />
+      ) : (
+        <div className="h-48 w-full bg-gray-100 rounded-xl mb-3 flex items-center justify-center text-gray-400">
+          No Image
+        </div>
+      )}
+      <h3 className="font-bold text-lg mb-1">{p.name}</h3>
+      <p className="text-sm text-gray-600 mb-2">{p.description}</p>
+      <div className="flex justify-between items-center mb-2">
+        <div className="text-lg font-semibold text-green-700">₹{p.price}</div>
+        <button
+          disabled={p.qty <= 0}
+          onClick={() => placeOrder(p._id)}
+          className="bg-gradient-to-r from-green-600 to-green-500 text-white px-4 py-2 rounded-xl hover:from-green-700 hover:to-green-600 transition"
+        >
+          Order
+        </button>
       </div>
+        <div className="text-sm text-gray-500">
+          Stock: {p.qty} | Farmer: {p.farmer?.name}
+        </div>
+      </div>
+      ))}
+    </div>
+
       <div className="flex justify-center mt-6 gap-2">
         <button onClick={()=>setPage(p=>Math.max(1,p-1))} className="px-3 py-1 bg-white rounded shadow">Prev</button>
         <div className="px-3 py-1 bg-white rounded shadow">Page {page} / {totalPages}</div>
