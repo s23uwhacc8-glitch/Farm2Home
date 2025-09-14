@@ -1,25 +1,56 @@
 // server/index.js
-import express from "express";
-import mongoose from "mongoose";
-import cors from "cors";
-import path from "path";
-import dotenv from "dotenv";
-import User from "./models/User.js";
-import seedDatabase from "./seed.js";
-import authRoutes from "./routes/auth.js";
-import productRoutes from "./routes/products.js";
-import orderRoutes from "./routes/orders.js";
-import userRoutes from "./routes/users.js";
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
+const path = require('path');
+require('dotenv').config();
 
-dotenv.config();
+// Models
+const User = require('./models/User');
+const Product = require('./models/Product');
+const Order = require('./models/Order');
+
+// Routes
+const authRoutes = require('./routes/auth');
+const productRoutes = require('./routes/products');
+const orderRoutes = require('./routes/orders');
+const userRoutes = require('./routes/users');
+
+// Seed function
+const bcrypt = require('bcryptjs');
+async function seedDatabase() {
+  try {
+    console.log("Seeding database...");
+
+    // Clear existing data (optional, comment out in production)
+    await User.deleteMany({});
+    await Product.deleteMany({});
+    await Order.deleteMany({});
+
+    const password = await bcrypt.hash('password123', 10);
+
+    const admin = await User.create({ name: 'Admin', email: 'admin@example.com', password, role: 'admin' });
+    const farmer = await User.create({ name: 'Rahul Farmer', email: 'farmer@example.com', password, role: 'farmer' });
+    const customer = await User.create({ name: 'Anita Customer', email: 'customer@example.com', password, role: 'customer' });
+    const delivery = await User.create({ name: 'Dinesh Delivery', email: 'delivery@example.com', password, role: 'delivery' });
+
+    await Product.create({ name: 'Organic Tomatoes', price: 40, qty: 100, farmer: farmer._id, description: 'Fresh tomatoes from farm', imageUrl: '' });
+    await Product.create({ name: 'Spinach (250g)', price: 25, qty: 80, farmer: farmer._id, description: 'Fresh spinach bunch', imageUrl: '' });
+
+    console.log("Database seeded ✅");
+  } catch (err) {
+    console.error("Seeding error:", err);
+  }
+}
+
+// Express app setup
 const app = express();
 const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGO_URI;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use('/uploads', express.static(path.resolve('uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -27,25 +58,25 @@ app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/users', userRoutes);
 
+// Test route
 app.get('/', (req, res) => res.send('Farm2Home API'));
 
 // MongoDB connection + auto-seed
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/farm2home';
 mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(async () => {
     console.log("MongoDB connected ✅");
 
-    // Auto-seed users if collection empty
     const userCount = await User.countDocuments();
     if (userCount === 0) {
-      console.log("No users found, seeding database...");
+      console.log("No users found, running seed...");
       await seedDatabase();
-      console.log("Database seeded ✅");
     } else {
       console.log("Users already exist, skipping seed.");
     }
 
-    // Start server
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
   })
   .catch(err => console.log("MongoDB connection error:", err));
+
 
