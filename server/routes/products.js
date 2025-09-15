@@ -33,10 +33,12 @@ router.get('/', async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 12;
     const farmer = req.query.farmer;
+    const category = req.query.category;
     const sort = req.query.sort || 'createdAt_desc';
 
     const filter = { name: { $regex: q, $options: 'i' } };
     if (farmer) filter.farmer = farmer;
+    if (category) filter.category = category;
 
     let sortObj = { createdAt: -1 };
     if (sort === 'price_asc') sortObj = { price: 1 };
@@ -45,6 +47,7 @@ router.get('/', async (req, res) => {
     const total = await Product.countDocuments(filter);
     const products = await Product.find(filter)
       .populate('farmer', 'name')
+      .populate('category','name')
       .sort(sortObj)
       .skip((page - 1) * limit)
       .limit(limit);
@@ -64,7 +67,7 @@ router.get('/', async (req, res) => {
 // CREATE product (with Cloudinary upload)
 router.post('/', auth, upload.single('image'), async (req, res) => {
   try {
-    const { name, price, qty, description } = req.body;
+    const { name, price, qty, description, category } = req.body;
     const farmer = req.user.id;
 
     const prod = new Product({
@@ -73,6 +76,7 @@ router.post('/', auth, upload.single('image'), async (req, res) => {
       qty,
       description,
       farmer,
+      category,
       imageUrl: req.file?.path, // Cloudinary public URL
     });
 
@@ -87,8 +91,12 @@ router.post('/', auth, upload.single('image'), async (req, res) => {
 // GET product by ID
 router.get('/:id', async (req, res) => {
   try {
-    const prod = await Product.findById(req.params.id).populate('farmer', 'name email');
+    const prod = await Product.findById(req.params.id)
+      .populate('farmer', 'name email')
+      .populate('category', 'name');
+
     if (!prod) return res.status(404).json({ message: 'Not found' });
+
     res.json(prod);
   } catch (err) {
     console.error(err);
@@ -96,20 +104,25 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+
 // UPDATE product (with optional new image upload)
 router.put('/:id', auth, upload.single('image'), async (req, res) => {
   try {
     const prod = await Product.findById(req.params.id);
     if (!prod) return res.status(404).json({ message: 'Product not found' });
-    if (prod.farmer.toString() !== req.user.id)
+
+    // ✅ Allow admin to edit any product
+    if (prod.farmer.toString() !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Not authorized' });
+    }
 
     const { name, price, qty, description } = req.body;
-    if (req.file) prod.imageUrl = req.file.path; // Replace with new Cloudinary image
+    if (req.file) prod.imageUrl = req.file.path;
     if (name) prod.name = name;
     if (price !== undefined) prod.price = price;
     if (qty !== undefined) prod.qty = qty;
     if (description) prod.description = description;
+    if (category) prod.category = category;
 
     await prod.save();
     res.json(prod);
@@ -124,8 +137,11 @@ router.delete('/:id', auth, async (req, res) => {
   try {
     const prod = await Product.findById(req.params.id);
     if (!prod) return res.status(404).json({ message: 'Product not found' });
-    if (prod.farmer.toString() !== req.user.id)
+
+    // ✅ Allow admin to delete any product
+    if (prod.farmer.toString() !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Not authorized' });
+    }
 
     await prod.deleteOne();
     res.json({ message: 'Deleted' });
@@ -134,5 +150,6 @@ router.delete('/:id', auth, async (req, res) => {
     res.status(500).send('Server error');
   }
 });
+
 
 module.exports = router;

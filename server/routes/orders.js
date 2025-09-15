@@ -12,21 +12,39 @@ async function assignDeliveryAgent(){
   lastAssignedIndex = (lastAssignedIndex + 1) % agents.length;
   return agents[lastAssignedIndex]._id;
 }
-// Place order (customer) - assigns delivery agent
-router.post('/', auth, async (req,res)=>{
-  try{
+/// Place order (customer) - assigns delivery agent
+router.post('/', auth, async (req, res) => {
+  try {
     const customer = req.user.id;
-    const {productId, qty} = req.body;
+    const { productId, qty } = req.body;
+
     const product = await Product.findById(productId);
-    if(!product) return res.status(404).json({message:'Product not found'});
-    if(product.qty < qty) return res.status(400).json({message:'Insufficient stock'});
-    product.qty -= qty; await product.save();
+    if (!product) return res.status(404).json({ message: 'Product not found' });
+    if (product.qty < qty) return res.status(400).json({ message: 'Insufficient stock' });
+
+    product.qty -= qty;
+    await product.save();
+
+    const totalPrice = product.price * qty;  // ✅ CALCULATE TOTAL
     const deliveryAgent = await assignDeliveryAgent();
-    const order = new Order({customer, product:productId, qty, status:'Pending', deliveryAgent});
+
+    const order = new Order({
+      customer,
+      product: productId,
+      qty,
+      totalPrice,  // ✅ SAVE TOTAL PRICE
+      status: 'Pending',
+      deliveryAgent
+    });
+
     await order.save();
     res.json(order);
-  }catch(err){ console.error(err); res.status(500).send('Server error'); }
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server error');
+  }
 });
+
 // Get my orders (customer)
 router.get('/my', auth, async (req,res)=>{ try{ const orders = await Order.find({customer:req.user.id}).populate('product').populate('deliveryAgent','name email'); res.json(orders); }catch(err){ console.error(err); res.status(500).send('Server error'); } });
 // Farmer: orders for their products

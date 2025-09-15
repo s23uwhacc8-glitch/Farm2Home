@@ -15,6 +15,8 @@ const authRoutes = require('./routes/auth');
 const productRoutes = require('./routes/products');
 const orderRoutes = require('./routes/orders');
 const userRoutes = require('./routes/users');
+const categoryRoutes = require('./routes/categories');
+const feedbackRoutes = require('./routes/feedback');
 
 // Seed function
 const bcrypt = require('bcryptjs');
@@ -57,6 +59,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/feedback', feedbackRoutes);
 
 // Test route
 app.get('/', (req, res) => res.send('Farm2Home API'));
